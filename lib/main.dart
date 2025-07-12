@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import './models/chat_model.dart';
 import './widgets/user_input.dart';
 import './widgets/chat_list.dart';
+import './widgets/settings_dialog.dart';
 
 void main() => runApp(const MyApp());
 
@@ -54,31 +55,62 @@ class ChatScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                Icons.smart_toy_outlined,
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'AI Assistant',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+        title: Consumer<ChatModel>(
+          builder: (context, model, child) {
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: model.isUsingLocalLLM 
+                        ? Colors.orange.withOpacity(0.2)
+                        : Theme.of(context).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    model.isUsingLocalLLM ? Icons.computer : Icons.cloud,
+                    color: model.isUsingLocalLLM 
+                        ? Colors.orange
+                        : Theme.of(context).colorScheme.onPrimaryContainer,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'AI Assistant',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      model.isUsingLocalLLM ? 'Local LLM' : 'OpenAI GPT',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: model.isUsingLocalLLM 
+                            ? Colors.orange
+                            : Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
         ),
         actions: [
+          Consumer<ChatModel>(
+            builder: (context, model, child) {
+              return IconButton(
+                icon: const Icon(Icons.settings),
+                onPressed: () => _showSettingsDialog(context, model),
+                tooltip: 'Settings',
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.info_outline),
             onPressed: () => _showInfoDialog(context),
@@ -95,6 +127,28 @@ class ChatScreen extends StatelessWidget {
           builder: (context, model, child) {
             return Column(
               children: [
+                if (model.isUsingLocalLLM && model.localLLMUrl.isEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    color: Colors.orange.withOpacity(0.1),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning, color: Colors.orange, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Local LLM URL not configured. Please set it in settings.',
+                            style: TextStyle(color: Colors.orange[700]),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => _showSettingsDialog(context, model),
+                          child: const Text('Configure'),
+                        ),
+                      ],
+                    ),
+                  ),
                 Expanded(
                   child: ChatList(messages: model.getMessages),
                 ),
@@ -107,14 +161,21 @@ class ChatScreen extends StatelessWidget {
     );
   }
 
+  void _showSettingsDialog(BuildContext context, ChatModel model) {
+    showDialog(
+      context: context,
+      builder: (context) => SettingsDialog(model: model),
+    );
+  }
+
   void _showInfoDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('About AI Assistant'),
         content: const Text(
-          'This is a Flutter app that connects to OpenAI\'s GPT API to provide AI-powered conversations. '
-          'Type your message and get intelligent responses from the AI.',
+          'This Flutter app supports both OpenAI\'s GPT API and local LLM servers. '
+          'Switch between them in settings to use your preferred AI model.',
         ),
         actions: [
           TextButton(
