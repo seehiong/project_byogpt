@@ -13,35 +13,38 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: "AI Chat Assistant",
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF10A37F),
-          brightness: Brightness.light,
+    return ChangeNotifierProvider(
+      create: (_) => ChatModel(),
+      child: MaterialApp(
+        title: "AI Chat Assistant",
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF10A37F),
+            brightness: Brightness.light,
+          ),
+          appBarTheme: const AppBarTheme(
+            centerTitle: true,
+            elevation: 0,
+            scrolledUnderElevation: 1,
+          ),
         ),
-        appBarTheme: const AppBarTheme(
-          centerTitle: true,
-          elevation: 0,
-          scrolledUnderElevation: 1,
+        darkTheme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF10A37F),
+            brightness: Brightness.dark,
+          ),
+          appBarTheme: const AppBarTheme(
+            centerTitle: true,
+            elevation: 0,
+            scrolledUnderElevation: 1,
+          ),
         ),
+        themeMode: ThemeMode.system,
+        home: const ChatScreen(),
       ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF10A37F),
-          brightness: Brightness.dark,
-        ),
-        appBarTheme: const AppBarTheme(
-          centerTitle: true,
-          elevation: 0,
-          scrolledUnderElevation: 1,
-        ),
-      ),
-      themeMode: ThemeMode.system,
-      home: const ChatScreen(),
     );
   }
 }
@@ -119,44 +122,39 @@ class ChatScreen extends StatelessWidget {
           const SizedBox(width: 8),
         ],
       ),
-      body: MultiProvider(
-        providers: [
-          ChangeNotifierProvider(create: (_) => ChatModel()),
-        ],
-        child: Consumer<ChatModel>(
-          builder: (context, model, child) {
-            return Column(
-              children: [
-                if (model.isUsingLocalLLM && model.localLLMUrl.isEmpty)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    color: Colors.orange.withOpacity(0.1),
-                    child: Row(
-                      children: [
-                        Icon(Icons.warning, color: Colors.orange, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Local LLM URL not configured. Please set it in settings.',
-                            style: TextStyle(color: Colors.orange[700]),
-                          ),
+      body: Consumer<ChatModel>(
+        builder: (context, model, child) {
+          return Column(
+            children: [
+              if (model.isUsingLocalLLM && model.localLLMUrl.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  color: Colors.orange.withOpacity(0.1),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning, color: Colors.orange, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Local LLM URL not configured. Please set it in settings.',
+                          style: TextStyle(color: Colors.orange[700]),
                         ),
-                        TextButton(
-                          onPressed: () => _showSettingsDialog(context, model),
-                          child: const Text('Configure'),
-                        ),
-                      ],
-                    ),
+                      ),
+                      TextButton(
+                        onPressed: () => _showSettingsDialog(context, model),
+                        child: const Text('Configure'),
+                      ),
+                    ],
                   ),
-                Expanded(
-                  child: ChatList(messages: model.getMessages),
                 ),
-                UserInput(chatController: chatController),
-              ],
-            );
-          },
-        ),
+              Expanded(
+                child: ChatList(messages: model.getMessages),
+              ),
+              UserInput(chatController: chatController),
+            ],
+          );
+        },
       ),
     );
   }
