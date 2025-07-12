@@ -20,7 +20,11 @@ class _SettingsDialogState extends State<SettingsDialog> {
   @override
   void initState() {
     super.initState();
-    _urlController = TextEditingController(text: widget.model.localLLMUrl);
+    _urlController = TextEditingController(
+      text: widget.model.localLLMUrl.isEmpty 
+          ? 'http://localhost:11434/v1/chat/completions'
+          : widget.model.localLLMUrl
+    );
     _isUsingLocalLLM = widget.model.isUsingLocalLLM;
   }
 
@@ -132,12 +136,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 controller: _urlController,
                 decoration: InputDecoration(
                   labelText: 'Local LLM URL',
-                  hintText: 'http://localhost:1234/v1/chat/completions',
+                  hintText: 'http://localhost:11434/v1/chat/completions',
                   prefixIcon: const Icon(Icons.link),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  helperText: 'Enter the URL of your local LLM server',
+                  helperText: 'Default: Ollama (port 11434) | LM Studio (port 1234)',
                   helperMaxLines: 2,
                 ),
               ),
@@ -166,10 +170,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '1. Install LM Studio or similar local LLM server\n'
-                      '2. Load your preferred model\n'
-                      '3. Start the server (usually on port 1234)\n'
-                      '4. Enter the server URL above',
+                      '1. Install Ollama (ollama.ai) or LM Studio\n'
+                      '2. For Ollama: ollama pull llama2 && ollama serve\n'
+                      '3. For LM Studio: Load model and start server\n'
+                      '4. Default URLs: Ollama (11434) | LM Studio (1234)',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.blue[700],
@@ -204,6 +208,11 @@ class _SettingsDialogState extends State<SettingsDialog> {
                       : 'Switched to OpenAI GPT',
                 ),
                 behavior: SnackBarBehavior.floating,
+                margin: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).size.height - 100,
+                  right: 20,
+                  left: MediaQuery.of(context).size.width - 250,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),

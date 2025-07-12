@@ -10,7 +10,7 @@ class ChatModel extends ChangeNotifier {
   final List<Widget> _messages = [];
   bool _isLoading = false;
   bool _isUsingLocalLLM = false;
-  String _localLLMUrl = '';
+  String _localLLMUrl = 'http://localhost:11434/v1/chat/completions';
 
   List<Widget> get getMessages => _messages;
   bool get isLoading => _isLoading;

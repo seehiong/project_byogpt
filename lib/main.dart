@@ -137,7 +137,7 @@ class ChatScreen extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Local LLM URL not configured. Please set it in settings.',
+                          'Local LLM not configured. Default: Ollama (localhost:11434)',
                           style: TextStyle(color: Colors.orange[700]),
                         ),
                       ),
