@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:cactus/cactus.dart' as cactus;
+import 'package:cactus/cactus.dart';
 
 import '../apis/openai_api.dart';
 import '../widgets/user_bubble.dart';
@@ -98,11 +98,25 @@ class ChatModel extends ChangeNotifier {
     notifyListeners();
     
     try {
-      // TODO: Fix Cactus API - currently having import issues
-      _cactusInitStatus = 'Cactus API temporarily unavailable - please use OpenAI or Local LLM';
-      _cactusInitProgress = null;
-      _cactusLM = null;
-      _isUsingCactus = false;
+      _cactusInitStatus = 'Downloading model...';
+      notifyListeners();
+      
+      _cactusLM = await CactusLM.init(
+        modelUrl: _modelUrl,
+        contextSize: 2048,
+        gpuLayers: 0, // CPU only for compatibility
+        onProgress: (progress, status, isError) {
+          _cactusInitProgress = progress;
+          _cactusInitStatus = status ?? 'Initializing...';
+          if (isError) {
+            _cactusInitStatus = 'Error: $status';
+          }
+          notifyListeners();
+        },
+      );
+      
+      _cactusInitStatus = 'Model ready!';
+      _cactusInitProgress = 1.0;
     } catch (e) {
       print('Failed to initialize Cactus LM: $e');
       _cactusInitStatus = 'Failed to initialize: $e';
@@ -195,16 +209,16 @@ class ChatModel extends ChangeNotifier {
     }
 
     try {
-      // Build conversation context
-      final messages = <Map<String, String>>[
-        {'role': 'system', 'content': 'You are a helpful AI assistant.'},
-        ..._chatHistory,
-        {'role': 'user', 'content': prompt},
+      // Build conversation context using ChatMessage objects
+      final messages = <ChatMessage>[
+        ChatMessage(role: 'system', content: 'You are a helpful AI assistant.'),
+        ..._chatHistory.map((msg) => ChatMessage(role: msg['role']!, content: msg['content']!)),
+        ChatMessage(role: 'user', content: prompt),
       ];
       
       // Use streaming completion for better user experience
       String fullResponse = '';
-      final result = await _cactusLM.completion(
+      await _cactusLM!.completion(
         messages,
         maxTokens: 500,
         temperature: 0.7,
@@ -222,10 +236,9 @@ class ChatModel extends ChangeNotifier {
           return true; // Continue streaming
         },
       );
-      
       return {
         "hasError": false,
-        "text": fullResponse.isNotEmpty ? fullResponse : result.text,
+        "text": fullResponse,
       };
     } catch (e) {
       return {
