@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io' show Platform;
 import '../models/chat_model.dart';
 
 class SettingsDialog extends StatefulWidget {
@@ -19,6 +21,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
   late bool _isUsingLocalLLM;
   late bool _isUsingCactus;
   int _selectedOption = 0; // 0: OpenAI, 1: Local LLM, 2: Cactus
+
+  bool get _isCactusSupported => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
   @override
   void initState() {
@@ -145,6 +149,9 @@ class _SettingsDialogState extends State<SettingsDialog> {
             // Cactus LLM Option
             Container(
               decoration: BoxDecoration(
+                color: !_isCactusSupported 
+                    ? Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3)
+                    : null,
                 border: Border.all(
                   color: _selectedOption == 2
                       ? Colors.purple
@@ -154,24 +161,69 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: RadioListTile<int>(
+                enabled: _isCactusSupported,
                 title: Row(
                   children: [
                     Icon(
                       Icons.memory,
-                      color: Colors.purple,
+                      color: _isCactusSupported ? Colors.purple : Colors.grey,
                       size: 20,
                     ),
                     const SizedBox(width: 8),
-                    const Text('Cactus LLM'),
+                    Text(
+                      'Cactus LLM',
+                      style: TextStyle(
+                        color: _isCactusSupported ? null : Colors.grey,
+                      ),
+                    ),
+                    if (!_isCactusSupported) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'Mobile Only',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.orange[700],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
-                subtitle: const Text('Run GGUF models directly in the app'),
+                subtitle: Text(
+                  _isCactusSupported 
+                      ? 'Run GGUF models directly in the app'
+                      : 'Only available on Android and iOS',
+                  style: TextStyle(
+                    color: _isCactusSupported ? null : Colors.grey,
+                  ),
+                ),
                 value: 2,
                 groupValue: _selectedOption,
                 onChanged: (value) {
-                  setState(() {
-                    _selectedOption = value!;
-                  });
+                  if (_isCactusSupported) {
+                    setState(() {
+                      _selectedOption = value!;
+                    });
+                  } else {
+                    // Show platform warning
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          kIsWeb 
+                              ? 'Cactus LLM is not supported on web. Please use OpenAI or Local LLM.'
+                              : 'Cactus LLM is only supported on Android and iOS.',
+                        ),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                  }
                 },
               ),
             ),
@@ -240,7 +292,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
             ],
             
             // Cactus Model URL Configuration
-            if (_selectedOption == 2) ...[
+            if (_selectedOption == 2 && _isCactusSupported) ...[
               Text(
                 'Cactus LLM Configuration',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -336,6 +388,47 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 ),
               ),
             ],
+            
+            // Platform warning for Cactus
+            if (_selectedOption == 2 && !_isCactusSupported) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.warning, color: Colors.orange, size: 16),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Platform Not Supported',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.orange[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      kIsWeb 
+                          ? 'Cactus LLM requires native platform access and cannot run in web browsers. Please use OpenAI or Local LLM for web deployment.'
+                          : 'Cactus LLM is currently only supported on Android and iOS platforms. Please use OpenAI or Local LLM on this platform.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.orange[700],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -346,10 +439,13 @@ class _SettingsDialogState extends State<SettingsDialog> {
         ),
         FilledButton(
           onPressed: () {
+            // Prevent saving Cactus on unsupported platforms
+            final finalIsUsingCactus = _selectedOption == 2 && _isCactusSupported;
+            
             widget.model.updateSettings(
               isUsingLocalLLM: _selectedOption == 1,
               localLLMUrl: _urlController.text.trim(),
-              isUsingCactus: _selectedOption == 2,
+              isUsingCactus: finalIsUsingCactus,
               modelUrl: _modelUrlController.text.trim(),
             );
             Navigator.of(context).pop();
@@ -358,7 +454,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  _selectedOption == 2
+                  finalIsUsingCactus
                       ? 'Switched to Cactus LLM'
                       : _selectedOption == 1
                           ? 'Switched to Local LLM'

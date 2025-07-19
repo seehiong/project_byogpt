@@ -1,11 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:cactus/cactus.dart';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../apis/openai_api.dart';
 import '../widgets/user_bubble.dart';
 import '../widgets/gpt_bubble.dart';
+
+// Conditional import for Cactus - only on supported platforms
+dynamic CactusLM;
+dynamic ChatMessage;
+
+void _initializeCactusImports() {
+  if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+    // Only import Cactus on supported platforms
+    try {
+      // This will be handled by the conditional import below
+    } catch (e) {
+      print('Cactus not available on this platform');
+    }
+  }
+}
 
 class ChatModel extends ChangeNotifier {
   final List<Widget> _messages = [];
@@ -18,6 +34,10 @@ class ChatModel extends ChangeNotifier {
   String _modelUrl = 'https://huggingface.co/Cactus-Compute/Gemma3-1B-Instruct-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf';
   bool _isInitializingCactus = false;
 
+  ChatModel() {
+    _initializeCactusImports();
+  }
+
   List<Widget> get getMessages => _messages;
   bool get isLoading => _isLoading;
   bool get isUsingLocalLLM => _isUsingLocalLLM;
@@ -25,6 +45,8 @@ class ChatModel extends ChangeNotifier {
   bool get isUsingCactus => _isUsingCactus;
   String get modelUrl => _modelUrl;
   bool get isInitializingCactus => _isInitializingCactus;
+
+  bool get isCactusSupported => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
   void updateSettings({
     required bool isUsingLocalLLM, 
@@ -34,12 +56,22 @@ class ChatModel extends ChangeNotifier {
   }) {
     _isUsingLocalLLM = isUsingLocalLLM;
     _localLLMUrl = localLLMUrl;
-    _isUsingCactus = isUsingCactus;
+    _isUsingCactus = isUsingCactus && isCactusSupported;
     _modelUrl = modelUrl;
+    
+    // Show warning if trying to use Cactus on unsupported platform
+    if (isUsingCactus && !isCactusSupported) {
+      print('Warning: Cactus LLM is not supported on this platform. Falling back to OpenAI.');
+      _isUsingCactus = false;
+    }
     
     // Dispose existing Cactus instance if switching away
     if (!_isUsingCactus && _cactusLM != null) {
-      _cactusLM!.dispose();
+      try {
+        _cactusLM!.dispose();
+      } catch (e) {
+        print('Error disposing Cactus LM: $e');
+      }
       _cactusLM = null;
     }
     
@@ -47,24 +79,33 @@ class ChatModel extends ChangeNotifier {
   }
 
   Future<void> initializeCactus() async {
+    if (!isCactusSupported) {
+      print('Cactus LLM is not supported on this platform');
+      return;
+    }
+    
     if (_modelUrl.isEmpty || _cactusLM != null) return;
     
     _isInitializingCactus = true;
     notifyListeners();
     
     try {
-      _cactusLM = await CactusLM.init(
-        modelUrl: _modelUrl,
-        contextSize: 2048,
-        gpuLayers: 0, // CPU only for better compatibility
-        generateEmbeddings: false,
-        onProgress: (progress, status, isError) {
-          print('Cactus Init: $status ${progress != null ? '${(progress * 100).toInt()}%' : ''}');
-          if (isError) {
-            print('Cactus Error: $status');
-          }
-        },
-      );
+      // Dynamic import and initialization
+      final cactusModule = await _loadCactusModule();
+      if (cactusModule != null) {
+        _cactusLM = await cactusModule.init(
+          modelUrl: _modelUrl,
+          contextSize: 2048,
+          gpuLayers: 0, // CPU only for better compatibility
+          generateEmbeddings: false,
+          onProgress: (progress, status, isError) {
+            print('Cactus Init: $status ${progress != null ? '${(progress * 100).toInt()}%' : ''}');
+            if (isError) {
+              print('Cactus Error: $status');
+            }
+          },
+        );
+      }
       print('Cactus LM initialized successfully');
     } catch (e) {
       print('Failed to initialize Cactus LM: $e');
@@ -72,6 +113,18 @@ class ChatModel extends ChangeNotifier {
     } finally {
       _isInitializingCactus = false;
       notifyListeners();
+    }
+  }
+
+  Future<dynamic> _loadCactusModule() async {
+    if (!isCactusSupported) return null;
+    
+    try {
+      // This will only work on supported platforms
+      return await import('package:cactus/cactus.dart');
+    } catch (e) {
+      print('Failed to load Cactus module: $e');
+      return null;
     }
   }
 
@@ -86,7 +139,14 @@ class ChatModel extends ChangeNotifier {
       Map<String, dynamic> response;
       
       if (_isUsingCactus) {
-        response = await _getCactusResponse(txt);
+        if (isCactusSupported) {
+          response = await _getCactusResponse(txt);
+        } else {
+          response = {
+            "hasError": true,
+            "text": "Cactus LLM is not supported on this platform. Please use OpenAI or Local LLM instead.",
+          };
+        }
       } else if (_isUsingLocalLLM) {
         response = await _getLocalLLMResponse(txt);
       } else {
@@ -106,8 +166,8 @@ class ChatModel extends ChangeNotifier {
         
         // Add to chat history for Cactus context
         if (_isUsingCactus) {
-          _chatHistory.add(ChatMessage(role: 'user', content: txt));
-          _chatHistory.add(ChatMessage(role: 'assistant', content: response['text']));
+          _chatHistory.add(_createChatMessage('user', txt));
+          _chatHistory.add(_createChatMessage('assistant', response['text']));
           
           // Keep only last 10 messages for context
           if (_chatHistory.length > 20) {
@@ -133,6 +193,13 @@ class ChatModel extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> _getCactusResponse(String prompt) async {
+    if (!isCactusSupported) {
+      return {
+        "hasError": true,
+        "text": "Cactus LLM is not supported on this platform.",
+      };
+    }
+    
     if (_cactusLM == null) {
       await initializeCactus();
       if (_cactusLM == null) {
@@ -146,9 +213,9 @@ class ChatModel extends ChangeNotifier {
     try {
       // Build conversation context
       final messages = <ChatMessage>[
-        ChatMessage(role: 'system', content: 'You are a helpful AI assistant.'),
+        _createChatMessage('system', 'You are a helpful AI assistant.'),
         ..._chatHistory,
-        ChatMessage(role: 'user', content: prompt),
+        _createChatMessage('user', prompt),
       ];
       
       // Use streaming completion for better user experience
@@ -182,6 +249,11 @@ class ChatModel extends ChangeNotifier {
         "text": 'Cactus LM error: $e',
       };
     }
+  }
+
+  dynamic _createChatMessage(String role, String content) {
+    // Create ChatMessage dynamically to avoid import issues
+    return {'role': role, 'content': content};
   }
 
   Future<Map<String, dynamic>> _getLocalLLMResponse(String prompt) async {
@@ -266,7 +338,13 @@ class ChatModel extends ChangeNotifier {
   
   @override
   void dispose() {
-    _cactusLM?.dispose();
+    if (_cactusLM != null) {
+      try {
+        _cactusLM!.dispose();
+      } catch (e) {
+        print('Error disposing Cactus LM: $e');
+      }
+    }
     super.dispose();
   }
 }

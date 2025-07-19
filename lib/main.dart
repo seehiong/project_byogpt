@@ -131,7 +131,8 @@ class ChatScreen extends StatelessWidget {
           return Column(
             children: [
               if ((model.isUsingLocalLLM && model.localLLMUrl.isEmpty) || 
-                  (model.isUsingCactus && model.modelUrl.isEmpty))
+                  (model.isUsingCactus && model.modelUrl.isEmpty) ||
+                  (model.isUsingCactus && !model.isCactusSupported))
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
@@ -143,7 +144,9 @@ class ChatScreen extends StatelessWidget {
                       Expanded(
                         child: Text(
                           model.isUsingCactus 
-                              ? 'Cactus LLM model URL not configured'
+                              ? !model.isCactusSupported
+                                  ? 'Cactus LLM is not supported on this platform'
+                                  : 'Cactus LLM model URL not configured'
                               : 'Local LLM not configured. Default: Ollama (localhost:11434)',
                           style: TextStyle(color: Colors.orange[700]),
                         ),
