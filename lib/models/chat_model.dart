@@ -98,7 +98,7 @@ class ChatModel extends ChangeNotifier {
     notifyListeners();
     
     try {
-      _cactusLM = await CactusLM.create(
+      _cactusLM = await Cactus.create(
         modelUrl: _modelUrl,
         contextSize: 2048,
         gpuLayers: 0, // CPU only for better compatibility
