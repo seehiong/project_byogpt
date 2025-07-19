@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:cactus/cactus.dart';
+import 'package:cactus/cactus.dart' as cactus;
 
 import '../apis/openai_api.dart';
 import '../widgets/user_bubble.dart';
@@ -98,7 +98,7 @@ class ChatModel extends ChangeNotifier {
     notifyListeners();
     
     try {
-      _cactusLM = await Cactus.create(
+      _cactusLM = await cactus.Cactus.create(
         modelUrl: _modelUrl,
         contextSize: 2048,
         gpuLayers: 0, // CPU only for better compatibility
