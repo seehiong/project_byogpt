@@ -15,7 +15,10 @@ class SettingsDialog extends StatefulWidget {
 
 class _SettingsDialogState extends State<SettingsDialog> {
   late TextEditingController _urlController;
+  late TextEditingController _modelUrlController;
   late bool _isUsingLocalLLM;
+  late bool _isUsingCactus;
+  int _selectedOption = 0; // 0: OpenAI, 1: Local LLM, 2: Cactus
 
   @override
   void initState() {
@@ -25,12 +28,24 @@ class _SettingsDialogState extends State<SettingsDialog> {
           ? 'http://localhost:11434/v1/chat/completions'
           : widget.model.localLLMUrl
     );
+    _modelUrlController = TextEditingController(text: widget.model.modelUrl);
     _isUsingLocalLLM = widget.model.isUsingLocalLLM;
+    _isUsingCactus = widget.model.isUsingCactus;
+    
+    // Set initial selection
+    if (_isUsingCactus) {
+      _selectedOption = 2;
+    } else if (_isUsingLocalLLM) {
+      _selectedOption = 1;
+    } else {
+      _selectedOption = 0;
+    }
   }
 
   @override
   void dispose() {
     _urlController.dispose();
+    _modelUrlController.dispose();
     super.dispose();
   }
 
@@ -55,14 +70,14 @@ class _SettingsDialogState extends State<SettingsDialog> {
             Container(
               decoration: BoxDecoration(
                 border: Border.all(
-                  color: !_isUsingLocalLLM 
+                  color: _selectedOption == 0
                       ? Theme.of(context).colorScheme.primary
                       : Theme.of(context).colorScheme.outline.withOpacity(0.3),
-                  width: !_isUsingLocalLLM ? 2 : 1,
+                  width: _selectedOption == 0 ? 2 : 1,
                 ),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: RadioListTile<bool>(
+              child: RadioListTile<int>(
                 title: Row(
                   children: [
                     Icon(
@@ -75,11 +90,11 @@ class _SettingsDialogState extends State<SettingsDialog> {
                   ],
                 ),
                 subtitle: const Text('Use OpenAI\'s cloud-based GPT models'),
-                value: false,
-                groupValue: _isUsingLocalLLM,
+                value: 0,
+                groupValue: _selectedOption,
                 onChanged: (value) {
                   setState(() {
-                    _isUsingLocalLLM = value!;
+                    _selectedOption = value!;
                   });
                 },
               ),
@@ -91,14 +106,14 @@ class _SettingsDialogState extends State<SettingsDialog> {
             Container(
               decoration: BoxDecoration(
                 border: Border.all(
-                  color: _isUsingLocalLLM 
+                  color: _selectedOption == 1
                       ? Colors.orange
                       : Theme.of(context).colorScheme.outline.withOpacity(0.3),
-                  width: _isUsingLocalLLM ? 2 : 1,
+                  width: _selectedOption == 1 ? 2 : 1,
                 ),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: RadioListTile<bool>(
+              child: RadioListTile<int>(
                 title: Row(
                   children: [
                     Icon(
@@ -111,11 +126,47 @@ class _SettingsDialogState extends State<SettingsDialog> {
                   ],
                 ),
                 subtitle: const Text('Use your own local LLM server'),
-                value: true,
-                groupValue: _isUsingLocalLLM,
+                value: 1,
+                groupValue: _selectedOption,
                 onChanged: (value) {
                   setState(() {
-                    _isUsingLocalLLM = value!;
+                    _selectedOption = value!;
+                  });
+                },
+              ),
+            ),
+            
+            const SizedBox(height: 20),
+            
+            // Cactus LLM Option
+            Container(
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: _selectedOption == 2
+                      ? Colors.purple
+                      : Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                  width: _selectedOption == 2 ? 2 : 1,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: RadioListTile<int>(
+                title: Row(
+                  children: [
+                    Icon(
+                      Icons.memory,
+                      color: Colors.purple,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('Cactus LLM'),
+                  ],
+                ),
+                subtitle: const Text('Run GGUF models directly in the app'),
+                value: 2,
+                groupValue: _selectedOption,
+                onChanged: (value) {
+                  setState(() {
+                    _selectedOption = value!;
                   });
                 },
               ),
@@ -124,7 +175,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
             const SizedBox(height: 20),
             
             // Local LLM URL Configuration
-            if (_isUsingLocalLLM) ...[
+            if (_selectedOption == 1) ...[
               Text(
                 'Local LLM Configuration',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -183,6 +234,67 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 ),
               ),
             ],
+            
+            // Cactus Model URL Configuration
+            if (_selectedOption == 2) ...[
+              Text(
+                'Cactus LLM Configuration',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _modelUrlController,
+                decoration: InputDecoration(
+                  labelText: 'Model URL',
+                  hintText: 'huggingface/gguf/model-link',
+                  prefixIcon: const Icon(Icons.link),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  helperText: 'HuggingFace GGUF model URL or local file path',
+                  helperMaxLines: 2,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.purple.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.info, color: Colors.purple, size: 16),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Cactus LLM Info',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.purple[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '• Runs GGUF models directly in your app\n'
+                      '• No external server needed\n'
+                      '• Works offline once model is downloaded\n'
+                      '• Example: microsoft/DialoGPT-medium-gguf',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.purple[700],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -194,8 +306,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
         FilledButton(
           onPressed: () {
             widget.model.updateSettings(
-              isUsingLocalLLM: _isUsingLocalLLM,
+              isUsingLocalLLM: _selectedOption == 1,
               localLLMUrl: _urlController.text.trim(),
+              isUsingCactus: _selectedOption == 2,
+              modelUrl: _modelUrlController.text.trim(),
             );
             Navigator.of(context).pop();
             
@@ -203,9 +317,11 @@ class _SettingsDialogState extends State<SettingsDialog> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  _isUsingLocalLLM 
-                      ? 'Switched to Local LLM'
-                      : 'Switched to OpenAI GPT',
+                  _selectedOption == 2
+                      ? 'Switched to Cactus LLM'
+                      : _selectedOption == 1
+                          ? 'Switched to Local LLM'
+                          : 'Switched to OpenAI GPT',
                 ),
                 behavior: SnackBarBehavior.floating,
                 margin: EdgeInsets.only(

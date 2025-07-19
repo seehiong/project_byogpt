@@ -66,14 +66,14 @@ class ChatScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: model.isUsingLocalLLM 
+                    color: (model.isUsingLocalLLM || model.isUsingCactus)
                         ? Colors.orange.withOpacity(0.2)
                         : Theme.of(context).colorScheme.primaryContainer,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    model.isUsingLocalLLM ? Icons.computer : Icons.cloud,
-                    color: model.isUsingLocalLLM 
+                    (model.isUsingLocalLLM || model.isUsingCactus) ? Icons.computer : Icons.cloud,
+                    color: (model.isUsingLocalLLM || model.isUsingCactus)
                         ? Colors.orange
                         : Theme.of(context).colorScheme.onPrimaryContainer,
                     size: 24,
@@ -90,9 +90,13 @@ class ChatScreen extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      model.isUsingLocalLLM ? 'Local LLM' : 'OpenAI GPT',
+                      model.isUsingCactus 
+                          ? 'Cactus LLM' 
+                          : model.isUsingLocalLLM 
+                              ? 'Local LLM' 
+                              : 'OpenAI GPT',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: model.isUsingLocalLLM 
+                        color: (model.isUsingLocalLLM || model.isUsingCactus)
                             ? Colors.orange
                             : Theme.of(context).colorScheme.primary,
                         fontWeight: FontWeight.w500,
@@ -126,7 +130,8 @@ class ChatScreen extends StatelessWidget {
         builder: (context, model, child) {
           return Column(
             children: [
-              if (model.isUsingLocalLLM && model.localLLMUrl.isEmpty)
+              if ((model.isUsingLocalLLM && model.localLLMUrl.isEmpty) || 
+                  (model.isUsingCactus && model.modelUrl.isEmpty))
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
@@ -137,7 +142,9 @@ class ChatScreen extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Local LLM not configured. Default: Ollama (localhost:11434)',
+                          model.isUsingCactus 
+                              ? 'Cactus LLM model URL not configured'
+                              : 'Local LLM not configured. Default: Ollama (localhost:11434)',
                           style: TextStyle(color: Colors.orange[700]),
                         ),
                       ),

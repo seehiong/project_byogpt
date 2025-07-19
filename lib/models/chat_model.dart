@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:cactus/cactus.dart';
 
 import '../apis/openai_api.dart';
 import '../widgets/user_bubble.dart';
@@ -11,16 +12,41 @@ class ChatModel extends ChangeNotifier {
   bool _isLoading = false;
   bool _isUsingLocalLLM = false;
   String _localLLMUrl = 'http://localhost:11434/v1/chat/completions';
+  CactusLM? _cactusLM;
+  bool _isUsingCactus = false;
+  String _modelUrl = '';
 
   List<Widget> get getMessages => _messages;
   bool get isLoading => _isLoading;
   bool get isUsingLocalLLM => _isUsingLocalLLM;
   String get localLLMUrl => _localLLMUrl;
+  bool get isUsingCactus => _isUsingCactus;
+  String get modelUrl => _modelUrl;
 
-  void updateSettings({required bool isUsingLocalLLM, required String localLLMUrl}) {
+  void updateSettings({
+    required bool isUsingLocalLLM, 
+    required String localLLMUrl,
+    bool isUsingCactus = false,
+    String modelUrl = '',
+  }) {
     _isUsingLocalLLM = isUsingLocalLLM;
     _localLLMUrl = localLLMUrl;
+    _isUsingCactus = isUsingCactus;
+    _modelUrl = modelUrl;
     notifyListeners();
+  }
+
+  Future<void> initializeCactus() async {
+    if (_modelUrl.isEmpty) return;
+    
+    try {
+      _cactusLM = await CactusLM.init(
+        modelUrl: _modelUrl,
+        contextSize: 2048,
+      );
+    } catch (e) {
+      print('Failed to initialize Cactus LM: $e');
+    }
   }
 
   Future<void> sendChat(String txt) async {
@@ -33,7 +59,9 @@ class ChatModel extends ChangeNotifier {
     try {
       Map<String, dynamic> response;
       
-      if (_isUsingLocalLLM) {
+      if (_isUsingCactus) {
+        response = await _getCactusResponse(txt);
+      } else if (_isUsingLocalLLM) {
         response = await _getLocalLLMResponse(txt);
       } else {
         response = await OpenAiRepository.getOpenAIChatCompletion(txt);
@@ -64,6 +92,37 @@ class ChatModel extends ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<Map<String, dynamic>> _getCactusResponse(String prompt) async {
+    if (_cactusLM == null) {
+      await initializeCactus();
+      if (_cactusLM == null) {
+        return {
+          "hasError": true,
+          "text": "Cactus LM not initialized. Please check your model URL.",
+        };
+      }
+    }
+
+    try {
+      final messages = [ChatMessage(role: 'user', content: prompt)];
+      final response = await _cactusLM!.completion(
+        messages, 
+        maxTokens: 1000, 
+        temperature: 0.7
+      );
+      
+      return {
+        "hasError": false,
+        "text": response,
+      };
+    } catch (e) {
+      return {
+        "hasError": true,
+        "text": 'Cactus LM error: $e',
+      };
     }
   }
 
