@@ -244,6 +244,81 @@ class _SettingsDialogState extends State<SettingsDialog> {
             
             const SizedBox(height: 20),
             
+            // OpenAI Configuration - Always show when OpenAI is selected
+            if (_selectedOption == 0) ...[
+              Text(
+                'OpenAI Configuration',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _openaiApiKeyController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'OpenAI API Key',
+                  hintText: 'sk-...',
+                  prefixIcon: const Icon(Icons.key),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  helperText: 'Get your API key from platform.openai.com',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _openaiApiUrlController,
+                decoration: InputDecoration(
+                  labelText: 'OpenAI API URL (Optional)',
+                  hintText: 'https://api.openai.com/v1/chat/completions',
+                  prefixIcon: const Icon(Icons.link),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  helperText: 'Leave default for OpenAI, or use custom endpoint',
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.info, color: Colors.blue, size: 16),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Setup Instructions',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blue[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '1. Visit platform.openai.com\n'
+                      '2. Sign up or log in to your account\n'
+                      '3. Go to API Keys section\n'
+                      '4. Create a new API key\n'
+                      '5. Copy and paste it above',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue[700],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            
             // Local LLM URL Configuration
             if (_selectedOption == 1) ...[
               Text(
