@@ -18,6 +18,8 @@ class ChatModel extends ChangeNotifier {
   bool _isUsingCactus = false;
   String _modelUrl = 'https://huggingface.co/Cactus-Compute/Gemma3-1B-Instruct-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf';
   bool _isInitializingCactus = false;
+  String _openaiApiKey = '';
+  String _openaiApiUrl = 'https://api.openai.com/v1/chat/completions';
 
   List<Widget> get getMessages => _messages;
   bool get isLoading => _isLoading;
@@ -26,6 +28,8 @@ class ChatModel extends ChangeNotifier {
   bool get isUsingCactus => _isUsingCactus;
   String get modelUrl => _modelUrl;
   bool get isInitializingCactus => _isInitializingCactus;
+  String get openaiApiKey => _openaiApiKey;
+  String get openaiApiUrl => _openaiApiUrl;
 
   bool get isCactusSupported => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
@@ -34,11 +38,15 @@ class ChatModel extends ChangeNotifier {
     required String localLLMUrl,
     bool isUsingCactus = false,
     String modelUrl = '',
+    String openaiApiKey = '',
+    String openaiApiUrl = '',
   }) {
     _isUsingLocalLLM = isUsingLocalLLM;
     _localLLMUrl = localLLMUrl;
     _isUsingCactus = isUsingCactus && isCactusSupported;
     _modelUrl = modelUrl;
+    _openaiApiKey = openaiApiKey;
+    _openaiApiUrl = openaiApiUrl.isNotEmpty ? openaiApiUrl : 'https://api.openai.com/v1/chat/completions';
     
     // Show warning if trying to use Cactus on unsupported platform
     if (isUsingCactus && !isCactusSupported) {
@@ -133,7 +141,7 @@ class ChatModel extends ChangeNotifier {
       } else if (_isUsingLocalLLM) {
         response = await _getLocalLLMResponse(txt);
       } else {
-        response = await OpenAiRepository.getOpenAIChatCompletion(txt);
+        response = await _getOpenAIResponse(txt);
       }
 
       // Remove the loading indicator
