@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform;
+import 'package:provider/provider.dart';
 import '../models/chat_model.dart';
 
 class SettingsDialog extends StatefulWidget {
