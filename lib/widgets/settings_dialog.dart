@@ -160,8 +160,9 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 ),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: RadioListTile<int>(
-                enabled: _isCactusSupported,
+              child: IgnorePointer(
+                ignoring: !_isCactusSupported,
+                child: RadioListTile<int>(
                 title: Row(
                   children: [
                     Icon(
@@ -225,6 +226,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                     );
                   }
                 },
+              ),
               ),
             ),
             

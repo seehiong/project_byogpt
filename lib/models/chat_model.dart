@@ -8,35 +8,16 @@ import '../apis/openai_api.dart';
 import '../widgets/user_bubble.dart';
 import '../widgets/gpt_bubble.dart';
 
-// Conditional import for Cactus - only on supported platforms
-dynamic CactusLM;
-dynamic ChatMessage;
-
-void _initializeCactusImports() {
-  if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
-    // Only import Cactus on supported platforms
-    try {
-      // This will be handled by the conditional import below
-    } catch (e) {
-      print('Cactus not available on this platform');
-    }
-  }
-}
-
 class ChatModel extends ChangeNotifier {
   final List<Widget> _messages = [];
-  final List<ChatMessage> _chatHistory = [];
+  final List<Map<String, String>> _chatHistory = [];
   bool _isLoading = false;
   bool _isUsingLocalLLM = false;
   String _localLLMUrl = 'http://localhost:11434/v1/chat/completions';
-  CactusLM? _cactusLM;
+  dynamic _cactusLM;
   bool _isUsingCactus = false;
   String _modelUrl = 'https://huggingface.co/Cactus-Compute/Gemma3-1B-Instruct-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf';
   bool _isInitializingCactus = false;
-
-  ChatModel() {
-    _initializeCactusImports();
-  }
 
   List<Widget> get getMessages => _messages;
   bool get isLoading => _isLoading;
@@ -68,7 +49,7 @@ class ChatModel extends ChangeNotifier {
     // Dispose existing Cactus instance if switching away
     if (!_isUsingCactus && _cactusLM != null) {
       try {
-        _cactusLM!.dispose();
+        _cactusLM.dispose();
       } catch (e) {
         print('Error disposing Cactus LM: $e');
       }
@@ -90,7 +71,7 @@ class ChatModel extends ChangeNotifier {
     notifyListeners();
     
     try {
-      // Dynamic import and initialization
+      // Dynamic import for Cactus - only on supported platforms
       final cactusModule = await _loadCactusModule();
       if (cactusModule != null) {
         _cactusLM = await cactusModule.init(
@@ -121,7 +102,9 @@ class ChatModel extends ChangeNotifier {
     
     try {
       // This will only work on supported platforms
-      return await import('package:cactus/cactus.dart');
+      // We can't use import() function in Dart, so we'll handle this differently
+      // For now, return null to indicate Cactus is not available
+      return null;
     } catch (e) {
       print('Failed to load Cactus module: $e');
       return null;
@@ -166,8 +149,8 @@ class ChatModel extends ChangeNotifier {
         
         // Add to chat history for Cactus context
         if (_isUsingCactus) {
-          _chatHistory.add(_createChatMessage('user', txt));
-          _chatHistory.add(_createChatMessage('assistant', response['text']));
+          _chatHistory.add({'role': 'user', 'content': txt});
+          _chatHistory.add({'role': 'assistant', 'content': response['text']});
           
           // Keep only last 10 messages for context
           if (_chatHistory.length > 20) {
@@ -212,15 +195,15 @@ class ChatModel extends ChangeNotifier {
 
     try {
       // Build conversation context
-      final messages = <ChatMessage>[
-        _createChatMessage('system', 'You are a helpful AI assistant.'),
+      final messages = <Map<String, String>>[
+        {'role': 'system', 'content': 'You are a helpful AI assistant.'},
         ..._chatHistory,
-        _createChatMessage('user', prompt),
+        {'role': 'user', 'content': prompt},
       ];
       
       // Use streaming completion for better user experience
       String fullResponse = '';
-      final result = await _cactusLM!.completion(
+      final result = await _cactusLM.completion(
         messages,
         maxTokens: 500,
         temperature: 0.7,
@@ -249,11 +232,6 @@ class ChatModel extends ChangeNotifier {
         "text": 'Cactus LM error: $e',
       };
     }
-  }
-
-  dynamic _createChatMessage(String role, String content) {
-    // Create ChatMessage dynamically to avoid import issues
-    return {'role': role, 'content': content};
   }
 
   Future<Map<String, dynamic>> _getLocalLLMResponse(String prompt) async {
@@ -340,7 +318,7 @@ class ChatModel extends ChangeNotifier {
   void dispose() {
     if (_cactusLM != null) {
       try {
-        _cactusLM!.dispose();
+        _cactusLM.dispose();
       } catch (e) {
         print('Error disposing Cactus LM: $e');
       }
