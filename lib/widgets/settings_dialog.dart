@@ -18,6 +18,8 @@ class SettingsDialog extends StatefulWidget {
 class _SettingsDialogState extends State<SettingsDialog> {
   late TextEditingController _urlController;
   late TextEditingController _modelUrlController;
+  late TextEditingController _openaiApiKeyController;
+  late TextEditingController _openaiApiUrlController;
   late bool _isUsingLocalLLM;
   late bool _isUsingCactus;
   int _selectedOption = 0; // 0: OpenAI, 1: Local LLM, 2: Cactus
@@ -37,6 +39,14 @@ class _SettingsDialogState extends State<SettingsDialog> {
           ? 'https://huggingface.co/Cactus-Compute/Gemma3-1B-Instruct-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf'
           : widget.model.modelUrl
     );
+    _openaiApiKeyController = TextEditingController(
+      text: widget.model.openaiApiKey
+    );
+    _openaiApiUrlController = TextEditingController(
+      text: widget.model.openaiApiUrl.isEmpty 
+          ? 'https://api.openai.com/v1/chat/completions'
+          : widget.model.openaiApiUrl
+    );
     _isUsingLocalLLM = widget.model.isUsingLocalLLM;
     _isUsingCactus = widget.model.isUsingCactus;
     
@@ -54,6 +64,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
   void dispose() {
     _urlController.dispose();
     _modelUrlController.dispose();
+    _openaiApiKeyController.dispose();
+    _openaiApiUrlController.dispose();
     super.dispose();
   }
 
