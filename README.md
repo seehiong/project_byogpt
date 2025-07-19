@@ -1,28 +1,31 @@
 # AI Chat Assistant - Flutter App
 
-A beautiful Flutter application that supports both OpenAI's GPT API and local LLM servers for AI-powered conversations. Features a modern Material Design 3 UI with dark/light theme support and the flexibility to switch between cloud and local AI models.
+A beautiful Flutter application that supports OpenAI's GPT API, local LLM servers, and on-device Cactus LLM for AI-powered conversations. Features a modern Material Design 3 UI with dark/light theme support and the flexibility to switch between cloud, local, and on-device AI models.
 
 ## Features
 
-- 🤖 **Dual AI Support**: Switch between OpenAI's GPT API and local LLM servers
+- 🤖 **Triple AI Support**: Switch between OpenAI's GPT API, local LLM servers, and on-device Cactus LLM
 - 🏠 **Local LLM Integration**: Connect to LM Studio, Ollama, or any OpenAI-compatible local server
 - ☁️ **Cloud AI**: Full OpenAI GPT integration with API key support
+- 📱 **On-Device AI**: Run GGUF models directly in your app with Cactus LLM (Android/iOS only)
 - 🎨 **Modern Material Design 3 UI** with beautiful animations
 - 🌙 **Dark/Light theme support** (follows system preference)
 - 📱 **Responsive design** for all screen sizes
 - 💬 **Enhanced chat bubbles** with copy functionality
 - ⚡ **Real-time indicators** showing current AI model and loading states
 - 🔄 **Easy switching** between AI models via settings
+- 📊 **Download progress tracking** for Cactus models
 - 🛠️ **Comprehensive error handling** and user feedback
 
 ## Screenshots
 
 The app features:
-- **Dynamic header** showing current AI model (Cloud/Local)
+- **Dynamic header** showing current AI model (Cloud/Local/Cactus)
 - **Settings dialog** for easy switching between AI providers
 - **Visual indicators** for connection status
-- **Setup guidance** for local LLM configuration
+- **Setup guidance** for local LLM and Cactus configuration
 - **Modern chat interface** with distinct user and AI message bubbles
+- **Download progress** for Cactus model initialization
 
 ## Prerequisites
 
@@ -43,6 +46,11 @@ The app features:
    - **Text Generation WebUI**: https://github.com/oobabooga/text-generation-webui
    - **Any OpenAI-compatible server**
 
+### For Cactus LLM (On-Device):
+4. **Android or iOS Device** (Cactus LLM is not supported on web/desktop)
+   - Requires sufficient storage for model files (1-4GB depending on model)
+   - Recommended: 4GB+ RAM for optimal performance
+
 ## Setup Instructions
 
 ### 1. Clone and Setup Project
@@ -60,13 +68,12 @@ flutter pub get
 
 **⚠️ IMPORTANT: Update your API key for OpenAI functionality**
 
-Edit `lib/constants/gpt_constant.dart`:
+In the app settings:
+1. Select "OpenAI GPT" option
+2. Enter your OpenAI API key
+3. Optionally customize the API URL
 
-```dart
-const openaiKey = 'your-actual-openai-api-key-here';
-```
-
-**Security Note:** Never commit your actual API key to version control.
+**Security Note:** API keys are stored locally on device only.
 
 ### 3. Setup Local LLM (Optional)
 
@@ -90,7 +97,28 @@ const openaiKey = 'your-actual-openai-api-key-here';
 3. Start with `--api` flag
 4. Default endpoint: `http://localhost:5000/v1/chat/completions`
 
-### 4. Run the Application
+### 4. Setup Cactus LLM (On-Device AI)
+
+**Platform Support:** Android and iOS only
+
+1. **Select Cactus LLM** in app settings
+2. **Choose a model URL** (default: Gemma3-1B-Instruct recommended)
+3. **Click "Download & Initialize Model"**
+4. **Wait for download** (progress shown with percentage)
+5. **Start chatting** once "Model ready!" appears
+
+#### Recommended Models:
+- **Gemma3-1B-Instruct** (1GB) - Fast, good quality, default option
+- **Phi-3-mini** (2GB) - Microsoft's balanced performance model
+- **Llama-3.2-1B** (1GB) - Meta's efficient model
+- **TinyLlama** (600MB) - Ultra-fast, basic responses
+
+#### Custom Models:
+- Use any GGUF format model from Hugging Face
+- Direct download URLs work best
+- Smaller models (1-2GB) recommended for mobile devices
+
+### 5. Run the Application
 
 #### Development Mode
 ```bash
@@ -112,6 +140,7 @@ flutter run -d ios
 **Web:**
 ```bash
 flutter run -d chrome
+# Note: Cactus LLM not available on web
 ```
 
 **Desktop:**
@@ -124,22 +153,31 @@ flutter run -d macos
 
 # Linux
 flutter run -d linux
+# Note: Cactus LLM not available on desktop
 ```
 
-### 5. Using the App
+### 6. Using the App
 
 1. **First Launch**: The app starts with OpenAI mode by default
-2. **Switch to Local LLM**: 
+2. **Switch AI Models**: 
    - Tap the settings icon in the app bar
-   - Select "Local LLM" option
-   - Enter your local server URL
+   - Select your preferred option:
+     - **OpenAI GPT** (cloud-based, requires API key)
+     - **Local LLM** (your own server)
+     - **Cactus LLM** (on-device, Android/iOS only)
+   - Configure the selected option
    - Save settings
 3. **Visual Indicators**: 
    - Cloud icon = OpenAI mode
    - Computer icon = Local LLM mode
-   - Orange warning = Local LLM not configured
+   - Memory chip icon = Cactus LLM mode
+   - Orange warning = Configuration needed
+4. **For Cactus LLM**:
+   - First use requires model download
+   - Progress shown with percentage
+   - Works offline after initial setup
 
-### 6. Build for Production
+### 7. Build for Production
 
 #### Android APK
 ```bash
@@ -154,13 +192,14 @@ flutter build ios --release
 #### Web
 ```bash
 flutter build web --release
+# Note: Cactus LLM features disabled on web
 ```
 
 ## Project Structure
 
 ```
 lib/
-├── main.dart                    # App entry point with dual AI support
+├── main.dart                    # App entry point with triple AI support
 ├── models/
 │   └── chat_model.dart         # Chat state management + AI switching logic
 ├── widgets/
@@ -180,7 +219,7 @@ lib/
 ### Common Issues
 
 1. **OpenAI API Key Error**
-   - Update the key in `lib/constants/gpt_constant.dart`
+   - Enter valid API key in settings
    - Verify account has sufficient credits
    - Check API key validity at https://platform.openai.com/
 
@@ -189,15 +228,22 @@ lib/
    - Check the URL format (include `/v1/chat/completions`)
    - Verify firewall isn't blocking the connection
    - Try `http://localhost:1234/v1/chat/completions` for LM Studio
+   - Try `http://localhost:11434/v1/chat/completions` for Ollama
 
-3. **Flutter Setup Issues**
+3. **Cactus LLM Issues**
+   - **Platform Error**: Only works on Android/iOS
+   - **Download Failed**: Check internet connection and storage space
+   - **Model Not Loading**: Try smaller model or restart app
+   - **Out of Memory**: Use smaller model (1GB recommended)
+
+4. **Flutter Setup Issues**
    ```bash
    flutter doctor
    flutter clean
    flutter pub get
    ```
 
-4. **Local LLM Server Not Starting**
+5. **Local LLM Server Not Starting**
    - **LM Studio**: Check if model is loaded and server is started
    - **Ollama**: Run `ollama serve` then `ollama run <model-name>`
    - **Port conflicts**: Try different ports (1234, 5000, 8080, 11434)
@@ -208,16 +254,18 @@ lib/
 2. **Firewall Issues**: Ensure Flutter and your LLM server ports are allowed
 3. **Local Server URLs**: Always use `http://` (not `https://`) for local servers
 
-### Local LLM Specific
+### Cactus LLM Specific
 
-1. **Model Loading**: Ensure your model is fully loaded before testing
-2. **Memory Issues**: Large models need sufficient RAM
-3. **Response Format**: The app expects OpenAI-compatible JSON responses
+1. **Model Download**: Requires stable internet for initial download
+2. **Storage Space**: Ensure 2-5GB free space for model files
+3. **Memory Issues**: Large models need sufficient RAM (4GB+ recommended)
+4. **Platform Support**: Only Android and iOS supported
+5. **First Run**: Model download may take 5-30 minutes depending on size and connection
 
 ## API Usage and Costs
 
 ### OpenAI
-- Uses GPT-3.5-turbo by default (configurable)
+- Uses GPT-3.5-turbo by default (configurable in code)
 - Each message incurs costs based on OpenAI pricing
 - Monitor usage: https://platform.openai.com/usage
 
@@ -227,16 +275,25 @@ lib/
 - **No internet required** for inference
 - **Hardware dependent** - performance varies by your system
 
+### Cactus LLM
+- **Free to use** after initial model download
+- **Complete privacy** - everything runs on-device
+- **Works offline** after setup
+- **No API costs** - one-time download only
+- **Mobile optimized** - designed for phones and tablets
+
 ## Customization
 
 ### Changing AI Models
 
-**OpenAI Models** (edit `lib/apis/openai_api.dart`):
+**OpenAI Models** (edit `lib/models/chat_model.dart`):
 ```dart
 "model": "gpt-4", // or gpt-3.5-turbo, gpt-4-turbo, etc.
 ```
 
 **Local LLM Models**: Change in your local server (LM Studio, Ollama, etc.)
+
+**Cactus Models**: Enter any GGUF model URL in settings
 
 ### Theming
 
@@ -255,8 +312,14 @@ The app works with any OpenAI-compatible API. Just ensure your server:
 2. Uses OpenAI-compatible JSON format
 3. Returns responses in the expected structure
 
-## Popular Local LLM Models
+## Popular Models by Category
 
+### OpenAI Models
+- **GPT-3.5-turbo** - Fast, cost-effective
+- **GPT-4** - Highest quality, more expensive
+- **GPT-4-turbo** - Balanced performance and cost
+
+### Local LLM Models
 - **Llama 2** (7B, 13B, 70B) - General purpose
 - **Code Llama** - Programming focused
 - **Mistral 7B** - Fast and efficient
@@ -264,12 +327,20 @@ The app works with any OpenAI-compatible API. Just ensure your server:
 - **WizardCoder** - Code generation
 - **Orca** - Reasoning tasks
 
+### Cactus LLM Models (GGUF)
+- **Gemma3-1B-Instruct** (1GB) - Recommended starter
+- **Phi-3-mini** (2GB) - Microsoft's efficient model
+- **Llama-3.2-1B** (1GB) - Meta's mobile-optimized
+- **TinyLlama** (600MB) - Ultra-fast responses
+- **Qwen2-1.5B** (1.5GB) - Multilingual support
+
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
-3. Test with both OpenAI and local LLM
-4. Submit a pull request
+3. Test with all three AI modes (OpenAI, Local LLM, Cactus)
+4. Ensure Cactus works on Android/iOS
+5. Submit a pull request
 
 ## License
 
@@ -279,10 +350,11 @@ This project is open source and available under the [MIT License](LICENSE).
 
 For issues:
 1. Check troubleshooting section above
-2. Verify your local LLM server is OpenAI-compatible
-3. Test with both AI modes to isolate issues
-4. Create an issue with details about your setup
+2. Verify your setup matches the platform requirements
+3. Test with different AI modes to isolate issues
+4. For Cactus issues, ensure you're on Android/iOS
+5. Create an issue with details about your setup and platform
 
 ---
 
-**Enjoy chatting with AI - both in the cloud and locally! 🚀**
+**Enjoy chatting with AI - in the cloud, locally, and on-device! 🚀**
