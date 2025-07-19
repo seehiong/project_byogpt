@@ -98,31 +98,17 @@ class ChatModel extends ChangeNotifier {
     notifyListeners();
     
     try {
-      _cactusLM = await cactus.Cactus.create(
-        modelUrl: _modelUrl,
-        contextSize: 2048,
-        gpuLayers: 0, // CPU only for better compatibility
-        generateEmbeddings: false,
-        onProgress: (progress, status, isError) {
-          _cactusInitStatus = status;
-          _cactusInitProgress = progress;
-          notifyListeners();
-          
-          print('Cactus Init: $status ${progress != null ? '${(progress * 100).toInt()}%' : ''}');
-          if (isError) {
-            print('Cactus Error: $status');
-          }
-        },
-      );
-      
-      _cactusInitStatus = 'Model ready!';
-      _cactusInitProgress = 1.0;
-      print('Cactus LM initialized successfully');
+      // TODO: Fix Cactus API - currently having import issues
+      _cactusInitStatus = 'Cactus API temporarily unavailable - please use OpenAI or Local LLM';
+      _cactusInitProgress = null;
+      _cactusLM = null;
+      _isUsingCactus = false;
     } catch (e) {
       print('Failed to initialize Cactus LM: $e');
       _cactusInitStatus = 'Failed to initialize: $e';
       _cactusInitProgress = null;
       _cactusLM = null;
+      _isUsingCactus = false;
     } finally {
       _isInitializingCactus = false;
       notifyListeners();
