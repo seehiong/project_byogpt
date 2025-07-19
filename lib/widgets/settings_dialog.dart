@@ -28,7 +28,11 @@ class _SettingsDialogState extends State<SettingsDialog> {
           ? 'http://localhost:11434/v1/chat/completions'
           : widget.model.localLLMUrl
     );
-    _modelUrlController = TextEditingController(text: widget.model.modelUrl);
+    _modelUrlController = TextEditingController(
+      text: widget.model.modelUrl.isEmpty 
+          ? 'https://huggingface.co/Cactus-Compute/Gemma3-1B-Instruct-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf'
+          : widget.model.modelUrl
+    );
     _isUsingLocalLLM = widget.model.isUsingLocalLLM;
     _isUsingCactus = widget.model.isUsingCactus;
     
@@ -248,12 +252,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 controller: _modelUrlController,
                 decoration: InputDecoration(
                   labelText: 'Model URL',
-                  hintText: 'huggingface/gguf/model-link',
+                  hintText: 'https://huggingface.co/model/resolve/main/model.gguf',
                   prefixIcon: const Icon(Icons.link),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  helperText: 'HuggingFace GGUF model URL or local file path',
+                  helperText: 'Direct download URL to GGUF model file',
                   helperMaxLines: 2,
                 ),
               ),
@@ -285,10 +289,47 @@ class _SettingsDialogState extends State<SettingsDialog> {
                       '• Runs GGUF models directly in your app\n'
                       '• No external server needed\n'
                       '• Works offline once model is downloaded\n'
-                      '• Example: microsoft/DialoGPT-medium-gguf',
+                      '• Recommended: Gemma3-1B-Instruct (fast, efficient)\n'
+                      '• First run downloads model (may take time)',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.purple[700],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.lightbulb, color: Colors.green, size: 16),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Recommended Models',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '• Gemma3-1B-Instruct (1GB) - Fast, good quality\n'
+                      '• Phi-3-mini (2GB) - Balanced performance\n'
+                      '• Llama-3.2-1B (1GB) - Meta\'s efficient model',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.green[700],
                       ),
                     ),
                   ],

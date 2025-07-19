@@ -9,12 +9,14 @@ import '../widgets/gpt_bubble.dart';
 
 class ChatModel extends ChangeNotifier {
   final List<Widget> _messages = [];
+  final List<ChatMessage> _chatHistory = [];
   bool _isLoading = false;
   bool _isUsingLocalLLM = false;
   String _localLLMUrl = 'http://localhost:11434/v1/chat/completions';
   CactusLM? _cactusLM;
   bool _isUsingCactus = false;
-  String _modelUrl = '';
+  String _modelUrl = 'https://huggingface.co/Cactus-Compute/Gemma3-1B-Instruct-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf';
+  bool _isInitializingCactus = false;
 
   List<Widget> get getMessages => _messages;
   bool get isLoading => _isLoading;
@@ -22,6 +24,7 @@ class ChatModel extends ChangeNotifier {
   String get localLLMUrl => _localLLMUrl;
   bool get isUsingCactus => _isUsingCactus;
   String get modelUrl => _modelUrl;
+  bool get isInitializingCactus => _isInitializingCactus;
 
   void updateSettings({
     required bool isUsingLocalLLM, 
@@ -33,19 +36,42 @@ class ChatModel extends ChangeNotifier {
     _localLLMUrl = localLLMUrl;
     _isUsingCactus = isUsingCactus;
     _modelUrl = modelUrl;
+    
+    // Dispose existing Cactus instance if switching away
+    if (!_isUsingCactus && _cactusLM != null) {
+      _cactusLM!.dispose();
+      _cactusLM = null;
+    }
+    
     notifyListeners();
   }
 
   Future<void> initializeCactus() async {
-    if (_modelUrl.isEmpty) return;
+    if (_modelUrl.isEmpty || _cactusLM != null) return;
+    
+    _isInitializingCactus = true;
+    notifyListeners();
     
     try {
       _cactusLM = await CactusLM.init(
         modelUrl: _modelUrl,
         contextSize: 2048,
+        gpuLayers: 0, // CPU only for better compatibility
+        generateEmbeddings: false,
+        onProgress: (progress, status, isError) {
+          print('Cactus Init: $status ${progress != null ? '${(progress * 100).toInt()}%' : ''}');
+          if (isError) {
+            print('Cactus Error: $status');
+          }
+        },
       );
+      print('Cactus LM initialized successfully');
     } catch (e) {
       print('Failed to initialize Cactus LM: $e');
+      _cactusLM = null;
+    } finally {
+      _isInitializingCactus = false;
+      notifyListeners();
     }
   }
 
@@ -77,6 +103,17 @@ class ChatModel extends ChangeNotifier {
 
       if (!response['hasError']) {
         _messages.add(GptBubble(response['text']));
+        
+        // Add to chat history for Cactus context
+        if (_isUsingCactus) {
+          _chatHistory.add(ChatMessage(role: 'user', content: txt));
+          _chatHistory.add(ChatMessage(role: 'assistant', content: response['text']));
+          
+          // Keep only last 10 messages for context
+          if (_chatHistory.length > 20) {
+            _chatHistory.removeRange(0, _chatHistory.length - 20);
+          }
+        }
       } else {
         _messages.add(GptBubble("ERROR: ${response['text']}"));
       }
@@ -101,22 +138,43 @@ class ChatModel extends ChangeNotifier {
       if (_cactusLM == null) {
         return {
           "hasError": true,
-          "text": "Cactus LM not initialized. Please check your model URL.",
+          "text": "Failed to initialize Cactus LM. Please check your model URL and try again.",
         };
       }
     }
 
     try {
-      final messages = [ChatMessage(role: 'user', content: prompt)];
-      final response = await _cactusLM!.completion(
-        messages, 
-        maxTokens: 1000, 
-        temperature: 0.7
+      // Build conversation context
+      final messages = <ChatMessage>[
+        ChatMessage(role: 'system', content: 'You are a helpful AI assistant.'),
+        ..._chatHistory,
+        ChatMessage(role: 'user', content: prompt),
+      ];
+      
+      // Use streaming completion for better user experience
+      String fullResponse = '';
+      final result = await _cactusLM!.completion(
+        messages,
+        maxTokens: 500,
+        temperature: 0.7,
+        onToken: (token) {
+          fullResponse += token;
+          // Update the UI with streaming response
+          if (_messages.isNotEmpty && _messages.last is GptBubble) {
+            final lastMessage = _messages.last as GptBubble;
+            if (lastMessage.message == "...") {
+              _messages.removeLast();
+              _messages.add(GptBubble(fullResponse));
+              notifyListeners();
+            }
+          }
+          return true; // Continue streaming
+        },
       );
       
       return {
         "hasError": false,
-        "text": response,
+        "text": fullResponse.isNotEmpty ? fullResponse : result.text,
       };
     } catch (e) {
       return {
@@ -201,7 +259,14 @@ class ChatModel extends ChangeNotifier {
 
   void clearChat() {
     _messages.clear();
+    _chatHistory.clear();
     _isLoading = false;
     notifyListeners();
+  }
+  
+  @override
+  void dispose() {
+    _cactusLM?.dispose();
+    super.dispose();
   }
 }

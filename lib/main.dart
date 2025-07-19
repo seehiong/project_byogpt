@@ -155,6 +155,28 @@ class ChatScreen extends StatelessWidget {
                     ],
                   ),
                 ),
+              if (model.isUsingCactus && model.isInitializingCactus)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  color: Colors.blue.withOpacity(0.1),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Initializing Cactus LLM model... This may take a few minutes.',
+                          style: TextStyle(color: Colors.blue[700]),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               Expanded(
                 child: ChatList(messages: model.getMessages),
               ),
