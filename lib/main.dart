@@ -173,10 +173,20 @@ class ChatScreen extends StatelessWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Initializing Cactus LLM model... This may take a few minutes.',
+                          model.cactusInitStatus.isNotEmpty 
+                              ? model.cactusInitStatus
+                              : 'Initializing Cactus LLM model...',
                           style: TextStyle(color: Colors.blue[700]),
                         ),
                       ),
+                      if (model.cactusInitProgress != null)
+                        Text(
+                          '${(model.cactusInitProgress! * 100).toInt()}%',
+                          style: TextStyle(
+                            color: Colors.blue[700],
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                     ],
                   ),
                 ),

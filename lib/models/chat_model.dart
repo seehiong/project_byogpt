@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:cactus/cactus.dart' as cactus;
 
 import '../apis/openai_api.dart';
 import '../widgets/user_bubble.dart';
@@ -18,6 +19,8 @@ class ChatModel extends ChangeNotifier {
   bool _isUsingCactus = false;
   String _modelUrl = 'https://huggingface.co/Cactus-Compute/Gemma3-1B-Instruct-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf';
   bool _isInitializingCactus = false;
+  String _cactusInitStatus = '';
+  double? _cactusInitProgress;
   String _openaiApiKey = '';
   String _openaiApiUrl = 'https://api.openai.com/v1/chat/completions';
 
@@ -28,6 +31,8 @@ class ChatModel extends ChangeNotifier {
   bool get isUsingCactus => _isUsingCactus;
   String get modelUrl => _modelUrl;
   bool get isInitializingCactus => _isInitializingCactus;
+  String get cactusInitStatus => _cactusInitStatus;
+  double? get cactusInitProgress => _cactusInitProgress;
   String get openaiApiKey => _openaiApiKey;
   String get openaiApiUrl => _openaiApiUrl;
 
@@ -70,52 +75,57 @@ class ChatModel extends ChangeNotifier {
   Future<void> initializeCactus() async {
     if (!isCactusSupported) {
       print('Cactus LLM is not supported on this platform');
+      _cactusInitStatus = 'Platform not supported';
+      notifyListeners();
       return;
     }
     
-    if (_modelUrl.isEmpty || _cactusLM != null) return;
+    if (_modelUrl.isEmpty) {
+      _cactusInitStatus = 'Model URL not configured';
+      notifyListeners();
+      return;
+    }
+    
+    if (_cactusLM != null) {
+      _cactusInitStatus = 'Already initialized';
+      notifyListeners();
+      return;
+    }
     
     _isInitializingCactus = true;
+    _cactusInitStatus = 'Starting initialization...';
+    _cactusInitProgress = null;
     notifyListeners();
     
     try {
-      // Dynamic import for Cactus - only on supported platforms
-      final cactusModule = await _loadCactusModule();
-      if (cactusModule != null) {
-        _cactusLM = await cactusModule.init(
-          modelUrl: _modelUrl,
-          contextSize: 2048,
-          gpuLayers: 0, // CPU only for better compatibility
-          generateEmbeddings: false,
-          onProgress: (progress, status, isError) {
-            print('Cactus Init: $status ${progress != null ? '${(progress * 100).toInt()}%' : ''}');
-            if (isError) {
-              print('Cactus Error: $status');
-            }
-          },
-        );
-      }
+      _cactusLM = await cactus.init(
+        modelUrl: _modelUrl,
+        contextSize: 2048,
+        gpuLayers: 0, // CPU only for better compatibility
+        generateEmbeddings: false,
+        onProgress: (progress, status, isError) {
+          _cactusInitStatus = status;
+          _cactusInitProgress = progress;
+          notifyListeners();
+          
+          print('Cactus Init: $status ${progress != null ? '${(progress * 100).toInt()}%' : ''}');
+          if (isError) {
+            print('Cactus Error: $status');
+          }
+        },
+      );
+      
+      _cactusInitStatus = 'Model ready!';
+      _cactusInitProgress = 1.0;
       print('Cactus LM initialized successfully');
     } catch (e) {
       print('Failed to initialize Cactus LM: $e');
+      _cactusInitStatus = 'Failed to initialize: $e';
+      _cactusInitProgress = null;
       _cactusLM = null;
     } finally {
       _isInitializingCactus = false;
       notifyListeners();
-    }
-  }
-
-  Future<dynamic> _loadCactusModule() async {
-    if (!isCactusSupported) return null;
-    
-    try {
-      // This will only work on supported platforms
-      // We can't use import() function in Dart, so we'll handle this differently
-      // For now, return null to indicate Cactus is not available
-      return null;
-    } catch (e) {
-      print('Failed to load Cactus module: $e');
-      return null;
     }
   }
 
@@ -192,13 +202,10 @@ class ChatModel extends ChangeNotifier {
     }
     
     if (_cactusLM == null) {
-      await initializeCactus();
-      if (_cactusLM == null) {
-        return {
-          "hasError": true,
-          "text": "Failed to initialize Cactus LM. Please check your model URL and try again.",
-        };
-      }
+      return {
+        "hasError": true,
+        "text": "Cactus LM not initialized. Please initialize the model first.",
+      };
     }
 
     try {

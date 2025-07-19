@@ -441,6 +441,103 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 ),
               ),
               const SizedBox(height: 12),
+              Consumer<ChatModel>(
+                builder: (context, model, child) {
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: model.isInitializingCactus 
+                          ? Colors.blue.withOpacity(0.1)
+                          : model.cactusInitStatus.contains('ready')
+                              ? Colors.green.withOpacity(0.1)
+                              : Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: model.isInitializingCactus 
+                            ? Colors.blue.withOpacity(0.3)
+                            : model.cactusInitStatus.contains('ready')
+                                ? Colors.green.withOpacity(0.3)
+                                : Colors.grey.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              model.isInitializingCactus 
+                                  ? Icons.download
+                                  : model.cactusInitStatus.contains('ready')
+                                      ? Icons.check_circle
+                                      : Icons.cloud_download,
+                              color: model.isInitializingCactus 
+                                  ? Colors.blue
+                                  : model.cactusInitStatus.contains('ready')
+                                      ? Colors.green
+                                      : Colors.grey,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                model.cactusInitStatus.isNotEmpty 
+                                    ? model.cactusInitStatus
+                                    : 'Model not initialized',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: model.isInitializingCactus 
+                                      ? Colors.blue[700]
+                                      : model.cactusInitStatus.contains('ready')
+                                          ? Colors.green[700]
+                                          : Colors.grey[700],
+                                ),
+                              ),
+                            ),
+                            if (model.cactusInitProgress != null)
+                              Text(
+                                '${(model.cactusInitProgress! * 100).toInt()}%',
+                                style: TextStyle(
+                                  color: Colors.blue[700],
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        if (!model.isInitializingCactus && !model.cactusInitStatus.contains('ready'))
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                model.initializeCactus();
+                              },
+                              icon: const Icon(Icons.download, size: 16),
+                              label: const Text('Download & Initialize Model'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.purple,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ),
+                        if (model.isInitializingCactus && model.cactusInitProgress != null)
+                          Column(
+                            children: [
+                              const SizedBox(height: 8),
+                              LinearProgressIndicator(
+                                value: model.cactusInitProgress,
+                                backgroundColor: Colors.grey.withOpacity(0.3),
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
