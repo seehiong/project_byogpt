@@ -449,6 +449,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
               localLLMUrl: _urlController.text.trim(),
               isUsingCactus: finalIsUsingCactus,
               modelUrl: _modelUrlController.text.trim(),
+              openaiApiKey: _openaiApiKeyController.text.trim(),
+              openaiApiUrl: _openaiApiUrlController.text.trim(),
             );
             Navigator.of(context).pop();
             

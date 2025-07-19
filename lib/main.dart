@@ -183,6 +183,28 @@ class ChatScreen extends StatelessWidget {
               Expanded(
                 child: ChatList(messages: model.getMessages),
               ),
+              if (!model.isUsingLocalLLM && !model.isUsingCactus && model.openaiApiKey.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  color: Colors.red.withOpacity(0.1),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning, color: Colors.red, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'OpenAI API key not configured. Please set it in settings.',
+                          style: TextStyle(color: Colors.red[700]),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => _showSettingsDialog(context, model),
+                        child: const Text('Configure'),
+                      ),
+                    ],
+                  ),
+                ),
               UserInput(chatController: chatController),
             ],
           );

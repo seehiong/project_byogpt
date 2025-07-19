@@ -242,6 +242,84 @@ class ChatModel extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> _getOpenAIResponse(String prompt) async {
+    if (_openaiApiKey.isEmpty) {
+      return {
+        "hasError": true,
+        "text": "OpenAI API key not configured. Please set it in settings.",
+      };
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse(_openaiApiUrl),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $_openaiApiKey"
+        },
+        body: jsonEncode({
+          "model": "gpt-3.5-turbo",
+          "messages": [
+            {"role": "user", "content": prompt}
+          ],
+          "temperature": 0.7,
+          "max_tokens": 1000,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        try {
+          final responseBody = jsonDecode(response.body);
+          List<dynamic> choices = responseBody['choices'];
+          if (choices.isNotEmpty) {
+            dynamic firstChoice = choices[0];
+            if (firstChoice.containsKey('message')) {
+              return {
+                "hasError": false,
+                "text": firstChoice['message']['content'],
+              };
+            } else {
+              return {
+                "hasError": true,
+                "text": 'No message generated from OpenAI',
+              };
+            }
+          } else {
+            return {
+              "hasError": true,
+              "text": 'No choices generated from OpenAI',
+            };
+          }
+        } catch (e) {
+          return {
+            "hasError": true,
+            "text": 'Failed to decode OpenAI response: $e',
+          };
+        }
+      } else if (response.statusCode == 401) {
+        return {
+          "hasError": true,
+          "text": 'Invalid OpenAI API key. Please check your API key in settings.',
+        };
+      } else if (response.statusCode == 429) {
+        return {
+          "hasError": true,
+          "text": 'OpenAI API rate limit exceeded. Please try again later.',
+        };
+      } else {
+        return {
+          "hasError": true,
+          "text": 'OpenAI API error: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {
+        "hasError": true,
+        "text": 'Failed to connect to OpenAI: $e',
+      };
+    }
+  }
+
   Future<Map<String, dynamic>> _getLocalLLMResponse(String prompt) async {
     if (_localLLMUrl.isEmpty) {
       return {
